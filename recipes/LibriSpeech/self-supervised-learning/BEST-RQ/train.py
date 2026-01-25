@@ -99,7 +99,7 @@ class BestRQBrain(sb.core.Brain):
 
         if stage != sb.Stage.TRAIN and sb.utils.distributed.if_main_process():
             predicted_classes = torch.argmax(pred, dim=-1)
-            correct_predictions = predicted_classes == targets
+            correct_predicti-ons = predicted_classes == targets
             accuracy = correct_predictions.sum().item() / len(
                 correct_predictions
             )

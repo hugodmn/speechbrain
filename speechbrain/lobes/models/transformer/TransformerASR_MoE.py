@@ -539,11 +539,11 @@ class TransformerASR(TransformerInterface):
         )
 
         if self.output_hidden_states:
-            encoder_out, _, hidden_states = outputs
+            encoder_out, _, hidden_states, aux_loss_list = outputs
             return encoder_out, hidden_states
         else:
-            encoder_out, _ = outputs
-            return encoder_out
+            encoder_out, _, aux_loss_list = outputs
+            return encoder_out, aux_loss_list
 
     def encode_streaming(self, src, context: TransformerASRStreamingContext):
         """

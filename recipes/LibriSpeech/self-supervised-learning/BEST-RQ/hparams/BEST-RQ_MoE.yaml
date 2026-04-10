@@ -38,7 +38,7 @@ optimizer_step_limit: 300000
 # seconds_per_batch * nb_gpus * grad_accumulation factor = ~7200 seconds.
 # If your dataset is bigger, we recommend increasing this batch size to 3 to 4
 # hours.
-max_batch_len: 450
+max_batch_len: 900
 train_num_buckets: 200
 grad_accumulation_factor: 2
 
@@ -50,6 +50,7 @@ test_dataloader_options:
     num_workers: 4
 
 lr: 0.0008
+aux_weight: 0.1
 
 # Mel-Filterbank parameters
 sample_rate: 16000
@@ -66,7 +67,7 @@ pad_to_divisible_by: 4
 # At least for the current architecture on LibriSpeech, we found out that
 # non-streaming accuracy is very similar between `streaming: True` and
 # `streaming: False`.
-streaming: True  # controls all Dynamic Chunk Training & chunk size & left context mechanisms
+streaming: False  # controls all Dynamic Chunk Training & chunk size & left context mechanisms
 
 # Configuration for Dynamic Chunk Training.
 dynchunktrain_config_sampler: !new:speechbrain.utils.dynamic_chunk_training.DynChunkTrainConfigRandomSampler # yamllint disable-line rule:line-length
@@ -79,7 +80,6 @@ dynchunktrain_config_sampler: !new:speechbrain.utils.dynamic_chunk_training.DynC
     valid_config: !new:speechbrain.utils.dynamic_chunk_training.DynChunkTrainConfig
         chunk_size: 8
         left_context_size: 16
-        
 ####################### Model parameters ###########################
 # Transformer
 d_model: 576
@@ -115,7 +115,7 @@ CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
     strides: (2, 2)
     residuals: (False, False)
 
-Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR # yamllint disable-line rule:line-length
+Transformer_MoE: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR_MoE # yamllint disable-line rule:line-length
     input_size: 640
     tgt_vocab: !ref <output_neurons>
     d_model: !ref <d_model>
@@ -126,11 +126,14 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     dropout: !ref <transformer_dropout>
     activation: !ref <activation>
     conformer_activation: !ref <activation>
-    encoder_module: conformer
+    encoder_module: conformer_moe
     attention_type: RelPosMHAXL
     normalize_before: True
     causal: False
     layerdrop_prob: !ref <encoder_layerdrop>
+    n_experts: 4
+    top_k: 1
+    moe_idx_layer: [6,7,8,9,10,11]
 
 # We must call an encoder wrapper so the decoder isn't run (we don't have any)
 wrapper: !new:speechbrain.lobes.models.transformer.TransformerASR.EncoderWrapper

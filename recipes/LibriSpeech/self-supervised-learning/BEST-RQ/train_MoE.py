@@ -82,7 +82,7 @@ class BestRQBrain(sb.core.Brain):
 
         ##### transformer
         # + aux_loss_list? 
-        enc_out = self.modules.wrapper(
+        enc_out, aux_loss_list = self.modules.wrapper(
             src, wav_lens, dynchunktrain_config=dynchunktrain_config
         )  # only use encoder
 
@@ -93,10 +93,10 @@ class BestRQBrain(sb.core.Brain):
         logits = logits[:, mask_idx, :]
 
         B, T, C = logits.shape
-        return logits.view(B * T, C), targets.view(B * T)
+        return logits.view(B * T, C), targets.view(B * T), aux_loss_list
 
     def compute_objectives(self, predictions, batch, stage):
-        pred, targets = predictions
+        pred, targets, aux_loss_list = predictions
 
         if stage != sb.Stage.TRAIN and sb.utils.distributed.if_main_process():
             predicted_classes = torch.argmax(pred, dim=-1)
@@ -106,38 +106,59 @@ class BestRQBrain(sb.core.Brain):
             )
             self.acc_metric.append(accuracy)
 
-        return F.cross_entropy(pred, targets)
+        loss_main = F.cross_entropy(pred, targets)
+
+        aux_loss = None
+        if stage == sb.Stage.TRAIN:
+            if aux_loss_list is not None and len(aux_loss_list) > 0:
+                # list[scalar] -> scalar
+                aux_loss = torch.stack([x for x in aux_loss_list]).mean()
+            else:
+                aux_loss = loss_main.new_tensor(0.0)
+
+            loss = loss_main + self.hparams.aux_weight * aux_loss
+        else:
+            loss = loss_main
+
+        # stocke pour logging (detach pour éviter graph)
+        self.last_loss_main = loss_main.detach()
+        self.last_aux_loss = aux_loss.detach() if aux_loss is not None else None
+
+        return loss
+
+
 
     def on_fit_batch_end(self, batch, outputs, loss, should_step):
-        """Called after fit_batch(), updates learning rate and does per-step logging."""
-
         if should_step:
             self.hparams.noam_annealing(self.optimizer)
 
-        # Perform step-wise logging
         if (
             hasattr(self.hparams, "log_interval")
             and self.optimizer_step % self.hparams.log_interval == 0
         ):
-            # Create a dictionary and fill it with everything we
-            # want to log such as contrastive loss, diversity loss,
-            # learning rate etc.
             log_dct = {}
-
             current_lr = self.optimizer.param_groups[0]["lr"]
             log_dct["steps"] = self.optimizer_step
             log_dct["lr"] = current_lr
             log_dct["avg_loss"] = self.avg_train_loss
 
+            # NEW: main / aux
+            if hasattr(self, "last_loss_main"):
+                log_dct["loss_main"] = float(self.last_loss_main.cpu())
+
+            if hasattr(self, "last_aux_loss") and self.last_aux_loss is not None:
+                aux = float(self.last_aux_loss.cpu())
+                log_dct["aux_loss"] = aux
+                log_dct["aux_w"] = float(self.hparams.aux_weight)
+                log_dct["aux_w_times_aux"] = float(self.hparams.aux_weight) * aux
+
             if hasattr(self, "time_last_log"):
-                run_time_since_last_log = time.time() - self.time_last_log
-                log_dct["run_time"] = run_time_since_last_log
+                log_dct["run_time"] = time.time() - self.time_last_log
             self.time_last_log = time.time()
 
             if sb.utils.distributed.if_main_process():
-                self.hparams.train_steps_logger.log_stats(
-                    stats_meta=log_dct,
-                )
+                self.hparams.train_steps_logger.log_stats(stats_meta=log_dct)
+
 
     def on_stage_start(self, stage, epoch):
         """Gets called at the beginning of each epoch"""

@@ -19,6 +19,7 @@ from speechbrain.utils.checkpoints import map_old_state_dict_weights
 
 from .Branchformer import BranchformerEncoder
 from .Conformer import ConformerEncoder
+from .Conformer_MoE import ConformerEncoder_MoE
 
 
 class TransformerInterface(nn.Module):
@@ -203,6 +204,22 @@ class TransformerInterface(nn.Module):
                     output_hidden_states=self.output_hidden_states,
                     layerdrop_prob=self.layerdrop_prob,
                 )
+            elif encoder_module == "conformer_moe":
+                self.encoder = ConformerEncoder_MoE(
+                    nhead=nhead,
+                    num_layers=num_encoder_layers,
+                    d_ffn=d_ffn,
+                    d_model=d_model,
+                    dropout=dropout,
+                    activation=conformer_activation,
+                    kernel_size=kernel_size,
+                    bias=bias,
+                    causal=self.causal,
+                    attention_type=self.attention_type,
+                    output_hidden_states=self.output_hidden_states,
+                    layerdrop_prob=self.layerdrop_prob,
+                )
+
                 assert normalize_before, (
                     "normalize_before must be True for Conformer"
                 )

@@ -127,6 +127,9 @@ class TransformerInterface(nn.Module):
         use_linear_after_conv: bool = False,
         output_hidden_states=False,
         layerdrop_prob=0.0,
+        n_experts: int = 3,
+        top_k: int = 1,
+        moe_idx_layer=None,
     ):
         super().__init__()
         self.causal = causal
@@ -218,6 +221,9 @@ class TransformerInterface(nn.Module):
                     attention_type=self.attention_type,
                     output_hidden_states=self.output_hidden_states,
                     layerdrop_prob=self.layerdrop_prob,
+                    n_experts=n_experts,
+                    top_k=top_k,
+                    moe_idx_layer=moe_idx_layer,
                 )
 
                 assert normalize_before, (

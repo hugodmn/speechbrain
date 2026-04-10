@@ -115,7 +115,7 @@ CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
     strides: (2, 2)
     residuals: (False, False)
 
-Transformer_MoE: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR_MoE # yamllint disable-line rule:line-length
+Transformer_MoE: !new:speechbrain.lobes.models.transformer.TransformerASR_MoE.TransformerASR # yamllint disable-line rule:line-length
     input_size: 640
     tgt_vocab: !ref <output_neurons>
     d_model: !ref <d_model>
@@ -136,8 +136,8 @@ Transformer_MoE: !new:speechbrain.lobes.models.transformer.TransformerASR.Transf
     moe_idx_layer: [6,7,8,9,10,11]
 
 # We must call an encoder wrapper so the decoder isn't run (we don't have any)
-wrapper: !new:speechbrain.lobes.models.transformer.TransformerASR.EncoderWrapper
-    transformer: !ref <Transformer>
+wrapper: !new:speechbrain.lobes.models.transformer.TransformerASR_MoE.EncoderWrapper
+    transformer: !ref <Transformer_MoE>
 
 Quantizer: !new:speechbrain.nnet.quantisers.RandomProjectionQuantizer
     input_dim: !ref <p_input>

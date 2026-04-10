@@ -270,6 +270,9 @@ class TransformerASR(TransformerInterface):
         use_linear_after_conv: bool = False,
         output_hidden_states=False,
         layerdrop_prob=0.0,
+        n_experts: int = 3,
+        top_k: int = 1,
+        moe_idx_layer=None,
     ):
         if causal is None:
             logger.warning(
@@ -303,6 +306,9 @@ class TransformerASR(TransformerInterface):
             use_linear_after_conv=use_linear_after_conv,
             output_hidden_states=output_hidden_states,
             layerdrop_prob=layerdrop_prob,
+            n_experts=n_experts,
+            top_k=top_k,
+            moe_idx_layer=moe_idx_layer,
         )
 
         self.custom_src_module = ModuleList(

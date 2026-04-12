@@ -304,7 +304,7 @@ def main():
 
     with open(hparams_file, encoding="utf-8") as fin:
         hparams = load_hyperpyyaml(fin, overrides)
-    hparams.update(run_opts)
+    hparams.update(run_opts.as_dict())
 
     sb.create_experiment_directory(
         experiment_directory=hparams["output_folder"],
